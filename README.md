@@ -1,6 +1,6 @@
 # CSCI310 Tic-Tac-Toe
 
-This project implements a simple tic-tac-toe game in C using threads to model two players, `X` and `O`.
+This project implements a simple tic-tac-toe game in C++ using threads to model two players, `X` and `O`.
 
 ## Project goal
 
@@ -14,15 +14,15 @@ The goal of this assignment is to demonstrate key operating system concepts:
 
 ## Files
 
-- `main.c` - program entry point
-- `Players.c` - player logic and board management
+- `main.cpp` - program entry point
+- `Players.cpp` - player logic and board management
 
 ## How it works
 
 The board is represented as a 3x3 character array:
 
-```c
-char board[3][3];
+```c++
+char board[ROW][COL];
 ```
 
 Each player thread is responsible for making moves on the shared board. A mutex is used to ensure that only one player updates or reads the board at a time, preventing data races and collisions.
@@ -32,7 +32,7 @@ Each player thread is responsible for making moves on the shared board. A mutex 
 From the project folder, compile the code with:
 
 ```bash
-gcc main.c -o game
+g++ main.cpp Players.cpp -o game -pthread
 ```
 
 Then run the program:
@@ -44,7 +44,7 @@ Then run the program:
 On Windows PowerShell:
 
 ```powershell
-gcc main.c -o game
+g++ main.cpp Players.cpp -o game
 .\game.exe
 ```
 
@@ -53,7 +53,7 @@ gcc main.c -o game
 - The game is designed to show thread coordination rather than a fully optimized strategy-based AI.
 - Random move generation is used for player moves in this assignment.
 - The board should be checked after each move for a winner or a draw.
-- The program uses `pthread.h` for POSIX threads and thread synchronization.
+- The program uses modern C++ standard threading (std::thread and std::mutex) for thread synchronization.
 
 ## Example behavior
 

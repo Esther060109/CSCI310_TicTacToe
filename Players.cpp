@@ -1,15 +1,6 @@
-// Players.c 
-//This file contains the implementation of the player functions for a game.
-
-#include <pthread.h> 
-#include <stdio.h> 
-#include <stdbool.h> 
-#include <stdlib.h>
-#include <time.h>
-
-
-//creating temporary global varibales for the board and the current player.
-//need to implement a mutex lock to prevent race conditions when accessing the board and current player variables.
+#include <iostream>
+#include <thread>
+#include <mutex>
 
 #define ROW 3
 #define COL 3
@@ -21,114 +12,136 @@ char board[ROW][COL] = {
     {' ', ' ', ' '}
 };
 
+//Global C++ Mutex
+std::mutex mtx;
+bool gameOver = false; //to stop both threads from printing who wins
 
-// void test() 
-// {
-//     printf("%c\n", board[0][0]);
-// };
-
-void display() 
+void display()
 { 
-    printf("%c %c %c\n", board[0][0],board[0][1],board[0][2]);
-    printf("%c %c %c\n", board[1][0],board[1][1],board[1][2]);
-    printf("%c %c %c\n", board[2][0],board[2][1],board[2][2]);
+    std::cout << board[0][0] << " | " << board[0][1] << " | " << board[0][2] << "\n";
+    std::cout << "---------\n";
+    std::cout << board[1][0] << " | " << board[1][1] << " | " << board[1][2] << "\n";
+    std::cout << "---------\n";
+    std::cout << board[2][0] << " | " << board[2][1] << " | " << board[2][2] << "\n";
 }
-//maybe make it so the player that starts is random each time the game is run. 
 
-void Player1() 
-{ 
+//Check if a given player symbol ('X' or 'O') has won
+int checkWin(char symbol) {
+    //Check rows and columns
+    for (int i = 0; i < ROW; i++) {
+        if (board[i][0] == symbol && board[i][1] == symbol && board[i][2] == symbol) return 1;
+        if (board[0][i] == symbol && board[1][i] == symbol && board[2][i] == symbol) return 1;
+    }
+    //Check diagonals
+    if (board[0][0] == symbol && board[1][1] == symbol && board[2][2] == symbol) return 1;
+    if (board[0][2] == symbol && board[1][1] == symbol && board[2][0] == symbol) return 1;
+
+    return 0;
+    }
+
+void Player1() {
     int row = 0; 
     int col = 0;
 
-    while(true) 
-    { 
-        int full = 0; 
+    while(true) {
+        {
+            // Lock the mutex for protected shared memory access
+            std::lock_guard<std::mutex> lock(mtx);
 
-        for(int i=0; i<ROW; i++) 
-        { 
-            for(int j=0; j<COL; j++) 
-            { 
-                if(board[i][j] != ' ')
-                {
-                    full +=1;
-                } 
-                printf("board[%d][%d]:%c\n",i,j,board[i][j]);
-            }
-        }
-        if (full == ROW * COL) 
-        { 
-            break; //game over, check if and who won. 
-        }
-        else 
-        { 
-            while(true)
-            {
-                row = rand() % ROW; //generate random location for the row location 
-                col = rand() % COL; //generate random location for the col location 
-                printf("row: %d, col: %d", row, col);
-                //make sure the space is not already taken 
-                if(board[row][col] == ' ')
-                { 
+            // If the game was already ended by the other thread, stop
+            if (gameOver) break;
+
+            // Pick a random spot until an empty one is found
+            while(true) {
+                row = rand() % ROW;
+                col = rand() % COL;
+                if(board[row][col] == ' ') {
                     board[row][col] = 'X';
                     break;
                 }
-                else if(board[row][col] != ' ')
-                {
-                    printf("The location was already populated\n");
+            }
+            // Check if this move won the game
+            if (checkWin('X')) {
+                std::cout << "Player 1 wins\n";
+                gameOver=true;
+                break;
+            }
+            if (checkWin('O')) {
+                std::cout << "Player 2 wins\n";
+                gameOver=true;
+                break;
+            }
+            // Check if the board is full (for draw)
+            int full = 0;
+            for(int i = 0; i < ROW; i++) {
+                for(int j = 0; j < COL; j++) {
+                    if(board[i][j] != ' ') full += 1;
                 }
             }
-        }
+            if (full == ROW * COL) {
+                std::cout << "It's a draw!\n";
+                gameOver=true;
+                break;
+            }
 
+            // Print board while inside the mutex lock
+            std::cout << "Player X played at (" << row << ", " << col << "):\n";
+            display();
+            std::cout << "===================\n";
+        } // Mutex automatically unlocks here
 
+        // Small pause so the threads don't spin too fast
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
-    
-};
+}
 
-
-void Player2()
-{ 
-    int row = 0; 
+//just copy pasted Player1 logic and changed to 'O'
+void Player2() {
+    int row = 0;
     int col = 0;
 
-    while(true) 
-    { 
-        int full = 0; 
+    while(true) {
+        {
+            std::lock_guard<std::mutex> lock(mtx);
 
-        for(int i=0; i<ROW; i++) 
-        { 
-            for(int j=0; j<COL; j++) 
-            { 
-                if(board[i][j] != ' ')
-                {
-                    full +=1;
-                } 
-                printf("board[%d][%d]:%c\n",i,j,board[i][j]);
-            }
-        }
-        if (full == ROW * COL) 
-        { 
-            break; //game over, check if and who won. 
-        }
-        else 
-        { 
-            while(true)
-            {
-                row = rand() % ROW; //generate random location for the row location 
-                col = rand() % COL; //generate random location for the col location 
-                printf("row: %d, col: %d", row, col);
-                
-                //make sure the space is not already taken 
-                if(board[row][col] == ' ')
-                { 
+            if (gameOver) break;
+
+            while(true) {
+                row = rand() % ROW;
+                col = rand() % COL;
+                if(board[row][col] == ' ') {
                     board[row][col] = 'O';
                     break;
                 }
-                else if(board[row][col] != ' ')
-                {
-                    printf("The location was already populated\n");
+            }
+
+            if (checkWin('X')) {
+                std::cout << "Player 1 wins\n";
+                gameOver=true;
+                break;
+            }
+            if (checkWin('O')) {
+                std::cout << "Player 2 wins\n";
+                gameOver=true;
+                break;
+            }
+            int full = 0;
+            for(int i = 0; i < ROW; i++) {
+                for(int j = 0; j < COL; j++) {
+                    if(board[i][j] != ' ') full += 1;
                 }
             }
-        }
+            if (full == ROW * COL) {
+                std::cout << "It's a draw!\n";
+                gameOver=true;
+                break;
+            }
 
+            std::cout << "Player O played at (" << row << ", " << col << "):\n";
+            display();
+            std::cout << "===================\n";
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
-};
+}
+
